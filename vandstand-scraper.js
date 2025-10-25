@@ -498,12 +498,15 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`✅ Vandstand Scraper running on port ${PORT}`);
+const HOST = '0.0.0.0'; // Important for Docker/Render
+
+app.listen(PORT, HOST, () => {
+    console.log(`✅ Vandstand Scraper running on ${HOST}:${PORT}`);
     console.log(`📊 Endpoint: http://localhost:${PORT}/api/waterlevel`);
     console.log(`🌊 Sources: DMI.dk & Esbjerg Havn`);
     console.log(`⏱️  Cache TTL: 5 minutes`);
     console.log('\nEndpoints:');
+    console.log(`  GET  / - Main application`);
     console.log(`  GET  /api/waterlevel - Get current water level data`);
     console.log(`  GET  /api/stations - List available stations`);
     console.log(`  GET  /health - Check server health`);
