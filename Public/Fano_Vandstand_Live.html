@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fanø Vandstand - Live Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        :root {
+            /* Stram farvepalette - kun 5 farver */
+            --primary: #0066CC;
+            --danger: #FF3B30;
+            --warning: #FF9500;
+            --text: #1D1D1F;
+            --gray: #86868B;
+            --bg: #FBFBFD;
+            --white: #FFFFFF;
+            --border: rgba(0,0,0,0.06);
+            
+            /* Konsistent spacing system */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-2xl: 48px;
+            --space-3xl: 64px;
+            
+            /* Typografi skala */
+            --text-xs: 11px;
+            --text-sm: 13px;
+            --text-base: 15px;
+            --text-lg: 17px;
+            --text-xl: 21px;
+            --text-2xl: 28px;
+            --text-3xl: 34px;
+            --text-4xl: 48px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+            font-size: var(--text-base);
+            line-height: 1.5;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        /* Layout Grid */
+        .app {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: var(--space-3xl) 0 var(--space-2xl);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--space-2xl);
+        }
+
+        .header h1 {
+            font-size: var(--text-4xl);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin-bottom: var(--space-sm);
+        }
+
+        .header .subtitle {
+            font-size: var(--text-lg);
+            color: var(--gray);
+            font-weight: 400;
+        }
+
+        .meta-bar {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-lg);
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--border);
+            font-size: var(--text-sm);
+            color: var(--gray);
+        }
+
+        .meta-bar span {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #34C759;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.offline {
+            background: var(--gray);
+            animation: none;
+        }
+
+        .status-indicator.warning {
+            background: var(--warning);
+        }
+
+        .status-indicator.danger {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Live Data Card */
+        .live-data-card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: var(--space-xl);
+            overflow: hidden;
+        }
+
+        .live-data-header {
+            padding: var(--space-md) var(--space-lg);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: var(--primary);
+            color: var(--white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .live-data-content {
+            padding: var(--space-xl);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+        }
+
+        .current-level {
+            text-align: center;
+        }
+
+        .current-level .label {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray);
+            margin-bottom: var(--space-sm);
+        }
+
+        .current-level .value {
+            font-size: var(--text-4xl);
+            font-weight: 700;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            letter-spacing: -0.02em;
+        }
+
+        .current-level .value.normal {
+            color: var(--text);
+        }
+
+        .current-level .value.warning {
+            color: var(--warning);
+        }
+
+        .current-level .value.danger {
+            color: var(--danger);
+        }
+
+        .current-level .value.low {
+            color: var(--primary);
+        }
+
+        .current-level .time {
+            font-size: var(--text-sm);
+            color: var(--gray);
+            margin-top: var(--space-sm);
+        }
+
+        .current-level .trend {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            margin-top: var(--space-sm);
+            padding: var(--space-xs) var(--space-sm);
+            background: var(--bg);
+            border-radius: 20px;
+            font-size: var(--text-sm);
+        }
+
+        .trend.rising {
+            color: var(--danger);
+        }
+
+        .trend.falling {
+            color: var(--primary);
+        }
+
+        .trend.stable {
+            color: var(--gray);
+        }
+
+        /* Forecast Section */
+        .forecast-section {
+            border-top: 1px solid var(--border);
+            padding-top: var(--space-xl);
+        }
+
+        .forecast-title {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray);
+            margin-bottom: var(--space-md);
+        }
+
+        .forecast-items {
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        .forecast-item {
+            display: grid;
+            grid-template-columns: 120px 80px 1fr;
+            align-items: center;
+            padding: var(--space-sm);
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .forecast-item.critical {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        .forecast-item.warning {
+            background: rgba(255, 149, 0, 0.1);
+            border: 1px solid rgba(255, 149, 0, 0.2);
+        }
+
+        .forecast-time {
+            font-size: var(--text-sm);
+            font-weight: 500;
+        }
+
+        .forecast-value {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: var(--text-sm);
+            font-weight: 600;
+        }
+
+        .forecast-status {
+            font-size: var(--text-sm);
+            color: var(--gray);
+        }
+
+        /* Status Alert */
+        .status-alert {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+
+        .status-alert.danger {
+            background: rgba(255, 59, 48, 0.05);
+            border-color: rgba(255, 59, 48, 0.3);
+        }
+
+        .status-alert.warning {
+            background: rgba(255, 149, 0, 0.05);
+            border-color: rgba(255, 149, 0, 0.3);
+        }
+
+        .status-alert.safe {
+            background: rgba(52, 199, 89, 0.05);
+            border-color: rgba(52, 199, 89, 0.3);
+        }
+
+        .status-alert-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            margin-bottom: var(--space-md);
+        }
+
+        .status-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-icon.danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .status-icon.warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .status-icon.safe {
+            background: #34C759;
+            color: var(--white);
+        }
+
+        .status-title {
+            font-size: var(--text-lg);
+            font-weight: 600;
+        }
+
+        .status-message {
+            font-size: var(--text-base);
+            line-height: 1.5;
+            color: var(--gray);
+        }
+
+        .status-recommendations {
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid var(--border);
+        }
+
+        .status-recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .status-recommendations li {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        .status-recommendations li:before {
+            content: "→";
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: var(--space-md);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: var(--space-md) var(--space-lg);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .card-header.danger {
+            background: var(--danger);
+            color: var(--white);
+            border-bottom: none;
+        }
+
+        .card-header.primary {
+            background: var(--primary);
+            color: var(--white);
+            border-bottom: none;
+        }
+
+        /* Water Levels */
+        .level-item {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            align-items: center;
+            padding: var(--space-md) var(--space-lg);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .level-item:last-child {
+            border-bottom: none;
+        }
+
+        .level-item:hover {
+            background: var(--bg);
+        }
+
+        .level-item.active {
+            background: rgba(0, 102, 204, 0.05);
+            border-left: 3px solid var(--primary);
+        }
+
+        .level-value {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            color: var(--gray);
+        }
+
+        .level-item.critical .level-value {
+            color: var(--danger);
+        }
+
+        .level-item.warning .level-value {
+            color: var(--warning);
+        }
+
+        .level-item.low .level-value {
+            color: var(--primary);
+        }
+
+        .level-desc {
+            font-size: var(--text-base);
+            line-height: 1.4;
+            color: var(--text);
+        }
+
+        /* Info Sections */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+
+        .info-card {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: var(--space-lg);
+        }
+
+        .info-card h3 {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray);
+            margin-bottom: var(--space-sm);
+        }
+
+        .info-card p {
+            font-size: var(--text-base);
+            line-height: 1.5;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: var(--space-xl);
+            margin-top: var(--space-xl);
+        }
+
+        .instructions h2 {
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray);
+            margin-bottom: var(--space-lg);
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 32px 1fr;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-sm);
+            font-weight: 600;
+        }
+
+        .step-text {
+            padding-top: var(--space-xs);
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: var(--space-3xl) 0 var(--space-xl);
+            font-size: var(--text-xs);
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Quick Actions - Floating */
+        .quick-actions {
+            position: fixed;
+            bottom: var(--space-lg);
+            right: var(--space-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            z-index: 100;
+        }
+
+        .action-btn {
+            width: 48px;
+            height: 48px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .action-btn.primary {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            :root {
+                --text-4xl: 36px;
+                --text-3xl: 28px;
+                --text-2xl: 24px;
+            }
+
+            .app {
+                padding: var(--space-md);
+            }
+
+            .header {
+                padding: var(--space-2xl) 0 var(--space-xl);
+            }
+
+            .meta-bar {
+                flex-direction: column;
+                gap: var(--space-sm);
+            }
+
+            .live-data-content {
+                grid-template-columns: 1fr;
+            }
+
+            .level-item {
+                grid-template-columns: 80px 1fr;
+                padding: var(--space-md);
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                bottom: var(--space-md);
+                right: var(--space-md);
+            }
+
+            .instructions {
+                padding: var(--space-lg);
+            }
+
+            .forecast-item {
+                grid-template-columns: 1fr;
+                gap: var(--space-xs);
+            }
+        }
+
+        /* Print optimized */
+        @media print {
+            .quick-actions {
+                display: none;
+            }
+
+            body {
+                background: white;
+                font-size: 11pt;
+            }
+
+            .card {
+                break-inside: avoid;
+                border: 1px solid #ddd;
+            }
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Focus states */
+        :focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>Fanø Vandstand</h1>
+            <p class="subtitle">Vind- og vandstandsoversigt med live data</p>
+            <div class="meta-bar">
+                <span><span id="statusIndicator" class="status-indicator"></span> <span id="statusText">Forbinder...</span></span>
+                <span id="currentDate">-</span>
+                <span>Esbjerg Havn I</span>
+            </div>
+        </header>
+
+        <!-- Status Alert -->
+        <div id="statusAlert" class="status-alert safe" style="display: none;">
+            <div class="status-alert-header">
+                <div id="statusIcon" class="status-icon safe">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                    </svg>
+                </div>
+                <div id="statusTitle" class="status-title">Sejlads status</div>
+            </div>
+            <div id="statusMessage" class="status-message"></div>
+            <div id="statusRecommendations" class="status-recommendations" style="display: none;">
+                <ul id="recommendationsList"></ul>
+            </div>
+        </div>
+
+        <!-- Live Data Card -->
+        <div class="live-data-card">
+            <div class="live-data-header">
+                <span>Aktuel Vandstand — Esbjerg Havn I</span>
+                <span id="updateTime">-</span>
+            </div>
+            <div class="live-data-content">
+                <div class="current-level">
+                    <div class="label">Nuværende niveau</div>
+                    <div id="currentValue" class="value normal">-</div>
+                    <div id="currentTime" class="time">-</div>
+                    <div id="trend" class="trend stable">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14"></path>
+                        </svg>
+                        <span id="trendText">Stabil</span>
+                    </div>
+                </div>
+                <div class="current-level">
+                    <div class="label">Prognose (næste 6 timer)</div>
+                    <div id="forecastValue" class="value normal">-</div>
+                    <div id="forecastTime" class="time">-</div>
+                    <div id="forecastTrend" class="trend stable">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14"></path>
+                        </svg>
+                        <span id="forecastTrendText">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="forecast-section">
+                <div class="forecast-title">Kritiske tidspunkter de næste 24 timer</div>
+                <div id="forecastItems" class="forecast-items">
+                    <div class="loading"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Water -->
+        <div class="card">
+            <div class="card-header danger">
+                Højvande — Kritiske niveauer
+            </div>
+            <div id="highWaterLevels">
+                <div class="level-item critical" data-level="300">
+                    <div class="level-value">+300 cm</div>
+                    <div class="level-desc">Forpladser i Esbjerg og Nordby under vand</div>
+                </div>
+                <div class="level-item critical" data-level="290">
+                    <div class="level-value">+290 cm</div>
+                    <div class="level-desc">Esbjerg Havn lukker typisk for tilkørselsveje</div>
+                </div>
+                <div class="level-item critical" data-level="285">
+                    <div class="level-value">+285 cm</div>
+                    <div class="level-desc">Vand på frakørselsvej ved den gamle ventesal i Esbjerg</div>
+                </div>
+                <div class="level-item critical" data-level="273">
+                    <div class="level-value">+273 cm</div>
+                    <div class="level-desc">Vand til kajkanten mellem M/B Sønderhø og den gamle ventesal</div>
+                </div>
+                <div class="level-item warning" data-level="240">
+                    <div class="level-value">+240 cm</div>
+                    <div class="level-desc">Ca. 3 timer før: vurder rydning af lav P-plads (Øst) i Esbjerg</div>
+                </div>
+                <div class="level-item warning" data-level="235">
+                    <div class="level-value">+235 cm</div>
+                    <div class="level-desc">Vand løber over kajkanten til lav P-plads (Øst) i Esbjerg</div>
+                </div>
+                <div class="level-item warning" data-level="230">
+                    <div class="level-value">+230 cm</div>
+                    <div class="level-desc">Vand over kajkanten på forpladsen i Nordby</div>
+                </div>
+                <div class="level-item warning" data-level="228">
+                    <div class="level-value">+228 cm</div>
+                    <div class="level-desc">Vand når havnekioskens dørtrin</div>
+                </div>
+                <div class="level-item warning" data-level="200">
+                    <div class="level-value">+200-225</div>
+                    <div class="level-desc">Bilsejlads kan stoppes pga. høj vandstand ved broklappen</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Water -->
+        <div class="card">
+            <div class="card-header primary">
+                Lavvande — Begrænsninger
+            </div>
+            <div id="lowWaterLevels">
+                <div class="level-item low" data-level="-140">
+                    <div class="level-value">−140 cm</div>
+                    <div class="level-desc">Busser og lave biler kan få bundkar-berøring ved ilandkørsel</div>
+                </div>
+                <div class="level-item low" data-level="-152">
+                    <div class="level-value">−152 cm</div>
+                    <div class="level-desc">Biloverførsel usikker; lastning efter vægt og frihøjde</div>
+                </div>
+                <div class="level-item low" data-level="-172">
+                    <div class="level-value">−172 cm</div>
+                    <div class="level-desc">Sejlads indstilles – ca. 60 cm vand ved rampens landfæste</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Højvande</h3>
+                <p>Høj vind fra Sydvest + fuldmåne øger risiko for stormflodspres</p>
+            </div>
+            <div class="info-card">
+                <h3>Lavvande</h3>
+                <p>Længerevarende østenvind (kuling) giver ofte meget lavvande</p>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h2>Sådan bruger du oversigten</h2>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-text">Tjek den aktuelle vandstand øverst (opdateres automatisk hvert 5. minut)</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-text">Se status for sejlads og eventuelle advarsler</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-text">Kontroller prognosen for de kommende timer</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-text">Sammenhold med tabellerne for tilkørsel, P-plads og bilsejlads</div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-text">Tjek Fanølinjens driftsmeldinger (Fenja/Menja/Grotte)</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Reference: cm relativ til DVR90 (DMI) · Flåde 2025: Fenja, Menja, Grotte (el)</p>
+            <p>Kilder: DMI Vandstand API, DVR90, Fanølinjen · Lokal erfaring siden 1980</p>
+            <p>⚠️ Ikke til sikkerhedskritiske beslutninger · Data opdateres hvert 5. minut</p>
+            <p id="apiStatus">API Status: <span id="apiStatusText">Tjekker...</span></p>
+        </footer>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <button class="action-btn primary" onclick="window.print()" title="Print">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9V2h12v7"/>
+                <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+        </button>
+        <button class="action-btn" onclick="refreshData()" title="Opdater data">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 4v6h6"></path>
+                <path d="M23 20v-6h-6"></path>
+                <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"></path>
+            </svg>
+        </button>
+        <button class="action-btn" onclick="window.scrollTo(0,0)" title="Til top">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 15l-6-6-6 6"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'http://localhost:3001/api/waterlevel/Esbjerg%20Havn%20I';
+        const UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+        
+        // State
+        let currentWaterLevel = null;
+        let forecastData = [];
+        let lastUpdate = null;
+        let updateTimer = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+            fetchWaterLevelData();
+            // Set up auto-refresh
+            updateTimer = setInterval(fetchWaterLevelData, UPDATE_INTERVAL);
+        });
+
+        // Update current date
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('da-DK', options);
+        }
+
+        // Fetch water level data from API
+        async function fetchWaterLevelData() {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                statusIndicator.className = 'status-indicator';
+                statusText.textContent = 'Henter data...';
+                
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                updateUI(data);
+                
+                statusIndicator.className = 'status-indicator';
+                statusText.textContent = 'Live DVR90';
+                document.getElementById('apiStatusText').textContent = 'Online ✓';
+                
+            } catch (error) {
+                console.error('Error fetching water level data:', error);
+                
+                // Use fallback data
+                useFallbackData();
+                
+                statusIndicator.className = 'status-indicator offline';
+                statusText.textContent = 'Offline (demo data)';
+                document.getElementById('apiStatusText').textContent = 
+                    'Offline - Bruger demo data. Start API server for live data.';
+            }
+        }
+
+        // Update UI with data
+        function updateUI(data) {
+            // Update current water level
+            const current = data.current || { value: 0 };
+            currentWaterLevel = current.value;
+            
+            // Update current value display
+            const currentValueEl = document.getElementById('currentValue');
+            currentValueEl.textContent = `${current.value >= 0 ? '+' : ''}${current.value} cm`;
+            currentValueEl.className = getValueClass(current.value);
+            
+            // Update time
+            const currentTime = new Date(current.time);
+            document.getElementById('currentTime').textContent = 
+                `Målt: ${currentTime.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`;
+            document.getElementById('updateTime').textContent = 
+                `Opdateret ${new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`;
+            
+            // Calculate trend
+            if (data.measured && data.measured.length > 1) {
+                const recent = data.measured.slice(-3);
+                const trend = calculateTrend(recent);
+                updateTrendDisplay('trend', 'trendText', trend);
+            }
+            
+            // Update forecast
+            if (data.forecast && data.forecast.length > 0) {
+                updateForecast(data.forecast);
+            }
+            
+            // Update status alert
+            updateStatusAlert(current.value, data.forecast);
+            
+            // Highlight active water levels
+            highlightActiveLevels(current.value);
+        }
+
+        // Calculate trend from recent measurements
+        function calculateTrend(measurements) {
+            if (measurements.length < 2) return 'stable';
+            
+            const first = measurements[0].value;
+            const last = measurements[measurements.length - 1].value;
+            const diff = last - first;
+            
+            if (Math.abs(diff) < 5) return 'stable';
+            return diff > 0 ? 'rising' : 'falling';
+        }
+
+        // Update trend display
+        function updateTrendDisplay(trendId, textId, trend) {
+            const trendEl = document.getElementById(trendId);
+            const textEl = document.getElementById(textId);
+            
+            trendEl.className = `trend ${trend}`;
+            
+            if (trend === 'rising') {
+                textEl.textContent = 'Stigende';
+                trendEl.querySelector('svg').innerHTML = '<path d="M7 17l9.2-9.2M17 17V7h-10"></path>';
+            } else if (trend === 'falling') {
+                textEl.textContent = 'Faldende';
+                trendEl.querySelector('svg').innerHTML = '<path d="M7 7l9.2 9.2M7 7v10h10"></path>';
+            } else {
+                textEl.textContent = 'Stabil';
+                trendEl.querySelector('svg').innerHTML = '<path d="M5 12h14"></path>';
+            }
+        }
+
+        // Update forecast display
+        function updateForecast(forecast) {
+            // Find next 6 hours max/min
+            const now = new Date();
+            const sixHoursLater = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+            
+            const nextSixHours = forecast.filter(f => {
+                const time = new Date(f.time);
+                return time >= now && time <= sixHoursLater;
+            });
+            
+            if (nextSixHours.length > 0) {
+                const values = nextSixHours.map(f => f.value);
+                const maxValue = Math.max(...values);
+                const minValue = Math.min(...values);
+                const avgValue = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+                
+                // Display forecast range
+                const forecastValueEl = document.getElementById('forecastValue');
+                if (Math.abs(maxValue - minValue) > 20) {
+                    forecastValueEl.textContent = `${minValue >= 0 ? '+' : ''}${minValue} til ${maxValue >= 0 ? '+' : ''}${maxValue} cm`;
+                } else {
+                    forecastValueEl.textContent = `${avgValue >= 0 ? '+' : ''}${avgValue} cm`;
+                }
+                forecastValueEl.className = getValueClass(maxValue);
+                
+                document.getElementById('forecastTime').textContent = 'Næste 6 timer';
+                
+                // Update forecast trend
+                const forecastTrend = currentWaterLevel < avgValue ? 'rising' : 
+                                     currentWaterLevel > avgValue ? 'falling' : 'stable';
+                updateTrendDisplay('forecastTrend', 'forecastTrendText', forecastTrend);
+            }
+            
+            // Update critical times
+            updateCriticalTimes(forecast);
+        }
+
+        // Update critical times in forecast
+        function updateCriticalTimes(forecast) {
+            const container = document.getElementById('forecastItems');
+            container.innerHTML = '';
+            
+            const criticalTimes = [];
+            const now = new Date();
+            const twentyFourHours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            
+            // Find critical levels in next 24 hours
+            forecast.forEach(f => {
+                const time = new Date(f.time);
+                if (time >= now && time <= twentyFourHours) {
+                    const value = f.value;
+                    
+                    // Check for critical high levels
+                    if (value >= 200) {
+                        criticalTimes.push({
+                            time: time,
+                            value: value,
+                            type: value >= 240 ? 'critical' : 'warning',
+                            message: getHighWaterMessage(value)
+                        });
+                    }
+                    
+                    // Check for critical low levels
+                    if (value <= -140) {
+                        criticalTimes.push({
+                            time: time,
+                            value: value,
+                            type: value <= -172 ? 'critical' : 'warning',
+                            message: getLowWaterMessage(value)
+                        });
+                    }
+                }
+            });
+            
+            // Sort by time and limit to 5 most critical
+            criticalTimes.sort((a, b) => a.time - b.time);
+            const displayTimes = criticalTimes.slice(0, 5);
+            
+            if (displayTimes.length > 0) {
+                displayTimes.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = `forecast-item ${item.type}`;
+                    
+                    const timeStr = item.time.toLocaleString('da-DK', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        weekday: 'short'
+                    });
+                    
+                    div.innerHTML = `
+                        <div class="forecast-time">${timeStr}</div>
+                        <div class="forecast-value">${item.value >= 0 ? '+' : ''}${item.value} cm</div>
+                        <div class="forecast-status">${item.message}</div>
+                    `;
+                    
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<div style="padding: var(--space-md); color: var(--gray);">Ingen kritiske niveauer de næste 24 timer</div>';
+            }
+        }
+
+        // Get high water message
+        function getHighWaterMessage(value) {
+            if (value >= 300) return 'Forpladser oversvømmet';
+            if (value >= 290) return 'Tilkørselsveje lukket';
+            if (value >= 285) return 'Vand på frakørselsvej';
+            if (value >= 273) return 'Vand til kajkant';
+            if (value >= 240) return 'Overvej P-plads rydning';
+            if (value >= 235) return 'Vand på lav P-plads';
+            if (value >= 230) return 'Vand på forplads Nordby';
+            if (value >= 228) return 'Vand ved havnekiosk';
+            if (value >= 200) return 'Mulig sejladsstop';
+            return 'Forhøjet vandstand';
+        }
+
+        // Get low water message
+        function getLowWaterMessage(value) {
+            if (value <= -172) return 'Sejlads indstillet';
+            if (value <= -152) return 'Biloverførsel usikker';
+            if (value <= -140) return 'Bundkar-berøring mulig';
+            return 'Lav vandstand';
+        }
+
+        // Update status alert
+        function updateStatusAlert(currentValue, forecast) {
+            const alertEl = document.getElementById('statusAlert');
+            const iconEl = document.getElementById('statusIcon');
+            const titleEl = document.getElementById('statusTitle');
+            const messageEl = document.getElementById('statusMessage');
+            const recommendationsEl = document.getElementById('statusRecommendations');
+            const listEl = document.getElementById('recommendationsList');
+            
+            alertEl.style.display = 'block';
+            listEl.innerHTML = '';
+            
+            // Determine status
+            let status = 'safe';
+            let title = 'Normal sejlads';
+            let message = 'Vandstanden tillader normal drift af færgen.';
+            const recommendations = [];
+            
+            // Check current level
+            if (currentValue >= 240 || currentValue <= -152) {
+                status = 'danger';
+                title = 'Sejlads truet';
+                
+                if (currentValue >= 240) {
+                    message = `Meget høj vandstand (${currentValue >= 0 ? '+' : ''}${currentValue} cm). Sejlads kan blive indstillet.`;
+                    recommendations.push('Kontakt Fanølinjen for status');
+                    recommendations.push('Overvej at rykke afgang');
+                    if (currentValue >= 240) {
+                        recommendations.push('Ryd lav P-plads øst i Esbjerg');
+                    }
+                } else {
+                    message = `Meget lav vandstand (${currentValue} cm). Biloverførsel usikker.`;
+                    recommendations.push('Kontroller bilens frihøjde');
+                    recommendations.push('Overvej alternativ transport');
+                }
+            } else if (currentValue >= 200 || currentValue <= -140) {
+                status = 'warning';
+                title = 'Sejlads påvirket';
+                
+                if (currentValue >= 200) {
+                    message = `Høj vandstand (${currentValue >= 0 ? '+' : ''}${currentValue} cm). Hold øje med udviklingen.`;
+                    recommendations.push('Følg vandstandsudviklingen tæt');
+                    recommendations.push('Vær klar til at handle hurtigt');
+                } else {
+                    message = `Lav vandstand (${currentValue} cm). Vær opmærksom ved ilandkørsel.`;
+                    recommendations.push('Kør forsigtigt ved rampen');
+                    recommendations.push('Undgå lave biler');
+                }
+            }
+            
+            // Check forecast for warnings
+            if (status === 'safe' && forecast && forecast.length > 0) {
+                const nextSixHours = forecast.filter(f => {
+                    const time = new Date(f.time);
+                    const now = new Date();
+                    return time >= now && time <= new Date(now.getTime() + 6 * 60 * 60 * 1000);
+                });
+                
+                const maxInNext6 = Math.max(...nextSixHours.map(f => f.value));
+                const minInNext6 = Math.min(...nextSixHours.map(f => f.value));
+                
+                if (maxInNext6 >= 200 || minInNext6 <= -140) {
+                    status = 'warning';
+                    title = 'Advarsel - ændringer forventet';
+                    
+                    if (maxInNext6 >= 200) {
+                        message = `Vandstanden forventes at stige til ${maxInNext6 >= 0 ? '+' : ''}${maxInNext6} cm inden for 6 timer.`;
+                        recommendations.push('Planlæg afgang i god tid');
+                        recommendations.push('Hold øje med opdateringer');
+                    } else {
+                        message = `Vandstanden forventes at falde til ${minInNext6} cm inden for 6 timer.`;
+                        recommendations.push('Overvej tidligere afgang');
+                        recommendations.push('Tjek bilens egnethed');
+                    }
+                }
+            }
+            
+            // Update UI
+            alertEl.className = `status-alert ${status}`;
+            iconEl.className = `status-icon ${status}`;
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            if (recommendations.length > 0) {
+                recommendationsEl.style.display = 'block';
+                recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.textContent = rec;
+                    listEl.appendChild(li);
+                });
+            } else {
+                recommendationsEl.style.display = 'none';
+            }
+            
+            // Update icon
+            if (status === 'danger') {
+                iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+            } else if (status === 'warning') {
+                iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+            } else {
+                iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>';
+            }
+        }
+
+        // Highlight active water levels
+        function highlightActiveLevels(currentValue) {
+            // Clear all active states
+            document.querySelectorAll('.level-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Highlight relevant levels
+            document.querySelectorAll('.level-item').forEach(el => {
+                const level = parseInt(el.dataset.level);
+                if (!isNaN(level)) {
+                    // For high water
+                    if (level > 0 && currentValue >= level - 10 && currentValue <= level + 10) {
+                        el.classList.add('active');
+                    }
+                    // For low water
+                    if (level < 0 && currentValue <= level + 10 && currentValue >= level - 10) {
+                        el.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        // Get value class based on water level
+        function getValueClass(value) {
+            if (value >= 240 || value <= -152) return 'value danger';
+            if (value >= 200 || value <= -140) return 'value warning';
+            if (value <= 0) return 'value low';
+            return 'value normal';
+        }
+
+        // Use fallback data when API is not available
+        function useFallbackData() {
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            // Simulate tidal pattern
+            const tidePhase = (currentHour * Math.PI / 6);
+            const baseLevel = 50;
+            const tideAmplitude = 100;
+            const currentValue = Math.round(baseLevel + tideAmplitude * Math.sin(tidePhase));
+            
+            // Create mock data
+            const mockData = {
+                current: {
+                    value: currentValue,
+                    time: now.toISOString()
+                },
+                measured: [],
+                forecast: []
+            };
+            
+            // Generate historical data
+            for (let i = 48; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+                const phase = ((currentHour - i) * Math.PI / 6);
+                mockData.measured.push({
+                    time: time.toISOString(),
+                    value: Math.round(baseLevel + tideAmplitude * Math.sin(phase))
+                });
+            }
+            
+            // Generate forecast
+            for (let i = 0; i < 48; i++) {
+                const time = new Date(now.getTime() + i * 60 * 60 * 1000);
+                const phase = ((currentHour + i) * Math.PI / 6);
+                mockData.forecast.push({
+                    time: time.toISOString(),
+                    value: Math.round(baseLevel + tideAmplitude * Math.sin(phase))
+                });
+            }
+            
+            updateUI(mockData);
+        }
+
+        // Refresh data manually
+        function refreshData() {
+            const btn = event.currentTarget;
+            btn.style.animation = 'spin 1s linear';
+            fetchWaterLevelData();
+            setTimeout(() => {
+                btn.style.animation = '';
+            }, 1000);
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateTimer) {
+                clearInterval(updateTimer);
+            }
+        });
+    </script>
+</body>
+</html>
