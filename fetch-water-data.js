@@ -97,21 +97,35 @@ async function main() {
     console.log('Fetching water level data...');
     
     // Try to fetch from both sources
-    const [esbjergData, dmiData] = await Promise.all([
-        fetchEsbjergHavn(),
-        fetchDMIData()
-    ]);
+    let esbjergData = null;
+    let dmiData = null;
+    
+    try {
+        [esbjergData, dmiData] = await Promise.all([
+            fetchEsbjergHavn(),
+            fetchDMIData()
+        ]);
+    } catch (error) {
+        console.error('Error fetching data:', error.message);
+    }
     
     // Use best available data
     let currentLevel = 0;
     let dataSource = 'Simulated';
     
-    if (esbjergData && esbjergData.waterLevel.dvr !== null) {
+    if (esbjergData && esbjergData.waterLevel && esbjergData.waterLevel.dvr !== null) {
         currentLevel = esbjergData.waterLevel.dvr * 100; // Convert to cm
         dataSource = 'Esbjerg Havn';
-    } else if (dmiData && dmiData.waterLevel.value !== null) {
+    } else if (dmiData && dmiData.waterLevel && dmiData.waterLevel.value !== null) {
         currentLevel = dmiData.waterLevel.value;
         dataSource = 'DMI';
+    } else {
+        // Use simulated data if no real data available
+        const now = new Date();
+        const hour = now.getHours() + now.getMinutes() / 60;
+        const tidePhase = (hour / 12.42) * 2 * Math.PI;
+        currentLevel = Math.round(85 * Math.sin(tidePhase));
+        console.log('Using simulated data as fallback');
     }
     
     // Create data object
@@ -131,13 +145,18 @@ async function main() {
     };
     
     // Save to public directory for GitHub Pages
-    if (!fs.existsSync('public/data')) {
-        fs.mkdirSync('public/data', { recursive: true });
+    try {
+        if (!fs.existsSync('public/data')) {
+            fs.mkdirSync('public/data', { recursive: true });
+        }
+        
+        fs.writeFileSync('public/data/water-level.json', JSON.stringify(waterData, null, 2));
+        
+        console.log(`✅ Data saved. Current level: ${currentLevel} cm (${dataSource})`);
+    } catch (error) {
+        console.error('Error saving data:', error.message);
+        process.exit(1);
     }
-    
-    fs.writeFileSync('public/data/water-level.json', JSON.stringify(waterData, null, 2));
-    
-    console.log(`✅ Data saved. Current level: ${currentLevel} cm (${dataSource})`);
 }
 
 // Run
