@@ -12,14 +12,14 @@ app.use(express.json());
 // Serve static files from public directory
 app.use(express.static('public'));
 
-// Tidal Model Configuration
+// Tidal Model Configuration - Justeret til aktuelle forhold
 const TIDE_CONFIG = {
     cycle: 12.42,           // Semi-diurnal tide cycle in hours
-    amplitude: 165,         // Typical amplitude for Esbjerg (cm)
-    meanLevel: 0,           // Mean water level (DVR90)
-    springTideBoost: 1.2,   // Spring tide multiplier
-    neapTideReduction: 0.7, // Neap tide multiplier
-    weatherVariation: 30    // Random weather effect range (cm)
+    amplitude: 120,         // Reduceret amplitude for mere realistiske værdier
+    meanLevel: 10,          // Justeret mean level tættere på aktuelle målinger
+    springTideBoost: 1.15,  // Mindre boost
+    neapTideReduction: 0.85, // Mindre reduktion
+    weatherVariation: 20    // Mindre variation
 };
 
 // Calculate water level at specific time
@@ -135,9 +135,14 @@ app.get('/api/waterlevel/:station?', (req, res) => {
             unit: 'cm',
             reference: 'DVR90',
             lastUpdate: now.toISOString(),
-            source: 'Tidevandsmodel (Realistisk simulering)',
-            model: 'Semi-diurnal med vejreffekter',
-            note: 'Baseret på typiske mønstre for Vadehavet'
+            source: 'SIMULERET DATA - Tidevandsmodel',
+            model: 'Semi-diurnal (12.42t cyklus)',
+            note: 'Dette er simuleret data. For live målinger se:',
+            liveDataLinks: {
+                dmi: 'https://www.dmi.dk/hav/vandstand/',
+                esbjergHavn: 'https://portesbjerg.dk/havneservice/vejrforhold'
+            },
+            disclaimer: 'Brug IKKE til navigation eller sikkerhedskritiske beslutninger'
         }
     });
 });
