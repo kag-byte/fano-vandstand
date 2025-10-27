@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fanø Vandstand - Live Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066CC;
+            --danger: #FF3B30;
+            --warning: #FF9500;
+            --success: #34C759;
+            --text: #1D1D1F;
+            --gray: #86868B;
+            --bg: #FBFBFD;
+            --white: #FFFFFF;
+            --border: rgba(0,0,0,0.06);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--gray);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .data-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray);
+            margin-bottom: 16px;
+        }
+
+        .value-display {
+            font-size: 48px;
+            font-weight: 700;
+            font-family: 'SF Mono', monospace;
+            margin-bottom: 8px;
+        }
+
+        .value-display.danger { color: var(--danger); }
+        .value-display.warning { color: var(--warning); }
+        .value-display.safe { color: var(--success); }
+
+        .value-label {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .chart-container {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        .info-box {
+            background: rgba(0, 102, 204, 0.05);
+            border: 1px solid rgba(0, 102, 204, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            font-size: 14px;
+            color: var(--gray);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        #error-message {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Fanø Vandstand</h1>
+            <p>Live data fra Esbjerg Havn og DMI</p>
+            <div class="status-badge">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="statusText">Henter data...</span>
+            </div>
+        </header>
+
+        <div id="error-message"></div>
+
+        <div class="data-cards">
+            <div class="card">
+                <h2>Nuværende Vandstand</h2>
+                <div id="currentLevel" class="value-display">--</div>
+                <div class="value-label">cm DVR90</div>
+                <div style="margin-top: 10px; font-size: 12px; color: var(--gray);">
+                    <span id="dataSource">-</span> • 
+                    <span id="updateTime">-</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Prognose (6 timer)</h2>
+                <div id="forecastLevel" class="value-display">--</div>
+                <div class="value-label">Forventet niveau</div>
+                <div style="margin-top: 10px; font-size: 12px; color: var(--gray);">
+                    <span id="trend">-</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Sejlads Status</h2>
+                <div id="sailingStatus" style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">-</div>
+                <div id="sailingMessage" style="font-size: 14px; color: var(--gray);">-</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray); margin-bottom: 16px;">
+                48 Timers Prognose
+            </h2>
+            <canvas id="waterChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="info-box">
+            <h3>ℹ️ Om denne side</h3>
+            <p>
+                Data hentes automatisk hver time via GitHub Actions fra Esbjerg Havn og DMI.
+                Prognosen er baseret på en tidevandsmodel justeret efter aktuelle målinger.
+                For kritiske beslutninger, tjek altid de officielle kilder.
+            </p>
+        </div>
+
+        <footer class="footer">
+            <p>
+                Data kilder: 
+                <a href="https://portesbjerg.dk/havneservice/vejrforhold" target="_blank">Esbjerg Havn</a> • 
+                <a href="https://www.dmi.dk/hav/vandstand/" target="_blank">DMI Vandstand</a>
+            </p>
+            <p>Hostet gratis på GitHub Pages • Opdateres hver time</p>
+        </footer>
+    </div>
+
+    <script>
+        // Load and display water level data
+        async function loadWaterData() {
+            try {
+                const response = await fetch('data/water-level.json');
+                
+                if (!response.ok) {
+                    throw new Error('Data ikke tilgængelig');
+                }
+                
+                const data = await response.json();
+                updateDisplay(data);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('error-message').style.display = 'block';
+                document.getElementById('error-message').innerHTML = 
+                    `⚠️ Kunne ikke hente data. Bruger simulerede værdier.<br>
+                     <small>${error.message}</small>`;
+                
+                // Use simulated data as fallback
+                useSimulatedData();
+            }
+        }
+
+        function updateDisplay(data) {
+            // Update status
+            document.getElementById('statusDot').className = 'status-dot';
+            document.getElementById('statusText').textContent = 
+                `Live data fra ${data.source}`;
+            
+            // Update current level
+            const currentLevel = data.current.value;
+            const levelEl = document.getElementById('currentLevel');
+            levelEl.textContent = formatLevel(currentLevel);
+            levelEl.className = getLevelClass(currentLevel);
+            
+            // Update metadata
+            document.getElementById('dataSource').textContent = data.source;
+            document.getElementById('updateTime').textContent = 
+                new Date(data.lastUpdate).toLocaleTimeString('da-DK');
+            
+            // Update forecast
+            if (data.predictions && data.predictions.length > 6) {
+                const sixHourForecast = data.predictions[6].value;
+                const forecastEl = document.getElementById('forecastLevel');
+                forecastEl.textContent = formatLevel(sixHourForecast);
+                forecastEl.className = getLevelClass(sixHourForecast);
+                
+                // Trend
+                const trend = sixHourForecast > currentLevel ? '📈 Stigende' : 
+                             sixHourForecast < currentLevel ? '📉 Faldende' : '➡️ Stabil';
+                document.getElementById('trend').textContent = trend;
+            }
+            
+            // Update sailing status
+            updateSailingStatus(currentLevel);
+            
+            // Draw chart if we have predictions
+            if (data.predictions) {
+                drawChart(data.predictions);
+            }
+        }
+
+        function formatLevel(value) {
+            return `${value >= 0 ? '+' : ''}${Math.round(value)}`;
+        }
+
+        function getLevelClass(value) {
+            if (value >= 240 || value <= -152) return 'value-display danger';
+            if (value >= 200 || value <= -140) return 'value-display warning';
+            return 'value-display safe';
+        }
+
+        function updateSailingStatus(level) {
+            const statusEl = document.getElementById('sailingStatus');
+            const messageEl = document.getElementById('sailingMessage');
+            
+            if (level >= 240 || level <= -152) {
+                statusEl.textContent = '🔴 Sejlads truet';
+                statusEl.style.color = 'var(--danger)';
+                messageEl.textContent = level >= 240 ? 
+                    'Meget høj vandstand - sejlads kan indstilles' :
+                    'Meget lav vandstand - biloverførsel usikker';
+            } else if (level >= 200 || level <= -140) {
+                statusEl.textContent = '🟡 Sejlads påvirket';
+                statusEl.style.color = 'var(--warning)';
+                messageEl.textContent = 'Hold øje med udviklingen';
+            } else {
+                statusEl.textContent = '🟢 Normal sejlads';
+                statusEl.style.color = 'var(--success)';
+                messageEl.textContent = 'Vandstanden tillader normal drift';
+            }
+        }
+
+        function drawChart(predictions) {
+            const canvas = document.getElementById('waterChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple line chart
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Find min/max
+            const values = predictions.map(p => p.value);
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            const range = maxValue - minValue;
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            // Horizontal lines
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (height - 2 * padding) * i / 4;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+            
+            // Draw data
+            ctx.strokeStyle = '#0066CC';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            predictions.forEach((point, i) => {
+                const x = padding + (width - 2 * padding) * i / (predictions.length - 1);
+                const y = padding + (height - 2 * padding) * (1 - (point.value - minValue) / range);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Draw danger zones
+            ctx.fillStyle = 'rgba(255, 59, 48, 0.1)';
+            
+            // High danger zone (above 240)
+            if (maxValue > 240) {
+                const y240 = padding + (height - 2 * padding) * (1 - (240 - minValue) / range);
+                ctx.fillRect(padding, padding, width - 2 * padding, y240 - padding);
+            }
+            
+            // Low danger zone (below -152)
+            if (minValue < -152) {
+                const yLow = padding + (height - 2 * padding) * (1 - (-152 - minValue) / range);
+                ctx.fillRect(padding, yLow, width - 2 * padding, height - padding - yLow);
+            }
+        }
+
+        function useSimulatedData() {
+            // Generate simulated data as fallback
+            const now = new Date();
+            const hour = now.getHours() + now.getMinutes() / 60;
+            const tidePhase = (hour / 12.42) * 2 * Math.PI;
+            const currentLevel = Math.round(85 * Math.sin(tidePhase));
+            
+            const predictions = [];
+            for (let i = 0; i < 48; i++) {
+                const futureHour = (hour + i) % 24;
+                const futurePhase = (futureHour / 12.42) * 2 * Math.PI;
+                predictions.push({
+                    time: new Date(now.getTime() + i * 60 * 60 * 1000).toISOString(),
+                    value: Math.round(85 * Math.sin(futurePhase))
+                });
+            }
+            
+            updateDisplay({
+                source: 'Simuleret',
+                lastUpdate: now.toISOString(),
+                current: { value: currentLevel },
+                predictions: predictions
+            });
+            
+            document.getElementById('statusDot').className = 'status-dot offline';
+            document.getElementById('statusText').textContent = 'Simuleret data (offline)';
+        }
+
+        // Load data on page load
+        loadWaterData();
+        
+        // Reload every 5 minutes
+        setInterval(loadWaterData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
