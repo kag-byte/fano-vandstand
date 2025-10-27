@@ -1,16 +1,16 @@
 {
   "name": "fano-vandstand",
   "version": "2.0.0",
-  "description": "Fanø water level monitoring with web scraping",
+  "description": "Fanø water level monitoring",
   "main": "simple-server.js",
   "scripts": {
     "start": "node simple-server.js",
     "build": "echo 'No build needed'",
-    "dev": "nodemon vandstand-scraper.js"
+    "dev": "nodemon simple-server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -19,11 +19,9 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "dmi",
     "water-level",
     "fanø",
-    "esbjerg",
-    "scraper"
+    "esbjerg"
   ],
   "author": "",
   "license": "ISC"
